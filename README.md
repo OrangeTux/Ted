@@ -60,6 +60,8 @@ optional arguments:
 
 Ted is licensed under [Mozilla Public License][mpl].
 
-[mpl]: LICENSE
 [mode]: https://en.wikipedia.org/wiki/OBD-II_PIDs#Modes
+[mpl]: LICENSE
 [pid]: https://en.wikipedia.org/wiki/OBD-II_PIDs
+[pip]: https://pip.pypa.io/en/stable/
+[pypi]: https://pypi.python.org/pypi/ted-tools
