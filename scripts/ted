@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+""" Read OBD-II data using a serial ELM327 interface and publish it on ZeroMQ
+PUB socket.
+
+"""
+import sys
+import zmq
+import time
+import argparse
+import logging
+from logging import getLogger, StreamHandler, DEBUG, ERROR, Formatter
+from obd import OBDResponse
+from obd import OBD, OBDStatus,  commands, console_handler, logger
+
+log = getLogger(__name__)
+
+formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+handler = StreamHandler()
+handler.setFormatter(formatter)
+
+log.addHandler(handler)
+
+
+def get_connection(device, baudrate):
+    """ Connect with ELM327 interface. """
+    return OBD(portstr=args.device, baudrate=args.baudrate)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-b', '--baudrate', help='Baudrate to use [default: 38400]', type=int, default=38400)  # NOQA
+    parser.add_argument('-d', '--device', help='Path to serial device [default: /dev/ttyUSB0]', default='/dev/ttyUSB0')  # NOQA
+    parser.add_argument('-p', '--port', help='Port to publish data on [default: 1337]', type=int, default=1337)  # NOQA
+    parser.add_argument('-v', action='store_true', help='Incrase verbosity')
+    args = parser.parse_args()
+
+    if args.v:
+        log.setLevel(DEBUG)
+    else:
+        logger.removeHandler(console_handler)
+
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+
+    exit_code = 1
+    socket.bind('tcp://127.0.0.1:{0}'.format(args.port))
+    con = get_connection(args.device, args.baudrate)
+
+    while con.status() == OBDStatus.NOT_CONNECTED:
+        log.warning('Can\'t connect to ELM327 adapter. Retrying in 1 second.')
+        time.sleep(1)
+
+        con = get_connection(args.device, args.baudrate)
+
+    # When the ELM327 interface is powered on but the engine isn't running only
+    # a handfull commands are supported. After a OBD instance is created
+    # 'OBD.supported_commands' isn't updated. Therefore we've to
+    # reconnect till the engine is running so `OBD.supported_commands` is
+    # populated with all supported commands.
+    while len(con.supported_commands) == len(commands.base_commands()):
+        log.warning('Engine is not running. Retrying in 1 second.')
+        con.close()
+
+        con = get_connection(args.device, args.baudrate)
+        time.sleep(1)
+
+    try:
+        while True:
+            log.debug('Supported commands: {0}'.format(len(con.supported_commands)))  # NOQA
+            for command in con.supported_commands:
+                try:
+                    resp = con.query(command)
+
+                # TODO: Workaround for bug: https://github.com/brendan-w/python-OBD/issues/55  # NOQA
+                except NameError:
+                    log.debug('NameError: {0} - {1}'.format(command.pid, command.name))  # NOQA
+                    continue
+
+                # TODO: Workaround for bug: https://github.com/brendan-w/python-OBD/issues/54  # NOQA
+                except ValueError:
+                    log.debug('ValueError: {0}'.format(command.name))
+                    continue
+
+                if resp.is_null():
+                    log.debug('Command {0:02x}{1:02x} didn\'t yield response.'.format(command.mode, command.pid))  # NOQA
+                    continue
+
+                try:
+                    log.debug('{0:02x}{1:02x} - {2}: {3}'.format(command.mode, command.pid, command.name, resp.value.magnitude))  # NOQA
+                    msg = '{0:02x}{1:02x} {2}'.format(command.mode, command.pid, resp.value.magnitude)  # NOQA
+                except AttributeError:
+                    msg = '{0:02x}{1:02x} {2}'.format(command.mode, command.pid, resp.value)  # NOQA
+                    continue
+
+                socket.send(msg.encode())
+
+            # time.sleep(0.1)
+    except KeyboardInterrupt:
+        exit_code = 0
+    finally:
+        con.close()
+
+    exit(exit_code)
