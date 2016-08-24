@@ -10,11 +10,13 @@ setup(
     packages=[],
     install_requires=[
         'obd==0.6.1',
+        'pyfiglet==0.7.5',
         'pyserial==3.1.1',
-        'pyzmq==15.4.0',
+        'pyzmq==14.3.1',
     ],
     scripts=[
         'scripts/ted',
+        'scripts/tscreen',
     ],
     license='MPL',
     classifiers=[

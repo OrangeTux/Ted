@@ -1,8 +1,8 @@
 # Ted
 
-Ted is a script to read data from a cars OBD-II connecter using an ELM327
-adapter. Ted automatically detects which [PID][pid]s are available and will
-only query those.
+Ted is a set of scripts to read and display data from a cars OBD-II connecter
+using an ELM327 adapter. Ted automatically detects which [PID][pid]s are
+available and will only query those.
 
 ## Installation
 
@@ -20,6 +20,7 @@ $ python setup.py install
 
 ## Usage
 
+### ted
 [ted](scripts/ted) uses the serial interface to a ELM327 adapter to read data
 from the OBD-II connector. It publishes this data on a ZeroMQ PUB socket. Other
 scripts can subscribe to this socket and can process the data.
@@ -55,6 +56,22 @@ optional arguments:
   -v                    Incrase verbosity
 
 ```
+
+### tscreen
+
+```bash
+$ tscreen -h
+usage: tscreen [-h] [-p PORT]
+
+TUI showing currents speed and RPM.
+
+optional arguments:
+    -h, --help            show this help message and exit
+    -p PORT, --port PORT  Port to read data from [default: 1337]
+```
+
+[tscreen](scripts/tscreen) creates a TUI like this:
+![tscreenshot](tscreen.png)
 
 ## License
 

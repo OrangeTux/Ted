@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+""" TUI showing currents speed and RPM. """
+import zmq
+import sys
+import curses
+from curses import newwin, wrapper, initscr
+import argparse
+from pyfiglet import Figlet
+
+f = Figlet(font='colossal')
+
+HEIGHT = 30
+WIDTH = 100
+
+HEIGHT_VALUE_WINDOW = int(HEIGHT / 2)
+WIDTH_VALUE_WINDOW = 50
+
+HEIGHT_UNIT_WINDOW = int(HEIGHT / 2)
+WIDTH_UNIT_WINDOW = 50
+
+PADDING = 3
+
+screen = initscr()
+
+speed_value = newwin(HEIGHT_VALUE_WINDOW, WIDTH_VALUE_WINDOW, 0, 0 + PADDING)  # NOQA
+speed_value.addstr(PADDING, 0, f.renderText('0'))
+
+speed_unit = newwin(HEIGHT_UNIT_WINDOW, WIDTH_UNIT_WINDOW, 0, WIDTH - WIDTH_UNIT_WINDOW + PADDING)  # NOQA
+speed_unit.addstr(PADDING, 0, f.renderText('KMH'))
+
+
+rpm_value = newwin(HEIGHT_VALUE_WINDOW, WIDTH_VALUE_WINDOW, 15, 0 + PADDING)  # NOQA
+rpm_value.addstr(PADDING, 0, f.renderText('0'))
+
+rpm_unit = newwin(HEIGHT_UNIT_WINDOW, WIDTH_UNIT_WINDOW, 15, WIDTH - WIDTH_UNIT_WINDOW + PADDING)  # NOQA
+rpm_unit.addstr(PADDING, 0, f.renderText('RPM'))
+
+
+def show_tui():
+    """ Show all initialized windows. """
+    speed_value.refresh()
+    speed_unit.refresh()
+    rpm_value.refresh()
+    rpm_unit.refresh()
+
+
+def update_window(window, value):
+    """ Update a window with a new value.
+
+    :param window: Instance of curses.Window.
+    :param value: A string.
+    """
+    window.addstr(PADDING, 0, f.renderText(value))
+    window.refresh()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    parser.add_argument('-p', '--port', help='Port to read data from [default: 1337]', type=int, default=1337)  # NOQA
+    args = parser.parse_args()
+
+    show_tui()
+
+    rpm_pid = b'010c'
+    speed_pid = b'010d'
+
+    context = zmq.Context()
+
+    socket = context.socket(zmq.SUB)
+    socket.setsockopt(zmq.SUBSCRIBE, rpm_pid)
+    socket.setsockopt(zmq.SUBSCRIBE, speed_pid)
+    socket.connect('tcp://127.0.0.1:{0}'.format(args.port))
+
+    try:
+        while True:
+            msg = socket.recv()
+            (pid, value) = msg.split()
+
+            if pid == speed_pid:
+                update_value(speed_value, str(int(float(value))))
+            elif pid == rpm_pid:
+                update_value(rpm_value, str(int(float(value))))
+    except KeyboardInterrupt:
+        exit_code = 0
+    finally:
+        curses.endwin()
+        sys.exit(exit_code)
