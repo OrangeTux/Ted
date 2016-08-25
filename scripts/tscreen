@@ -78,9 +78,9 @@ if __name__ == '__main__':
             (pid, value) = msg.split()
 
             if pid == speed_pid:
-                update_value(speed_value, str(int(float(value))))
+                update_window(speed_value, str(int(float(value))))
             elif pid == rpm_pid:
-                update_value(rpm_value, str(int(float(value))))
+                update_window(rpm_value, str(int(float(value))))
     except KeyboardInterrupt:
         exit_code = 0
     finally:
