@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='ted-tools',
-    version='0.1.0',
+    version='0.2.0a1',
     description='Scripts to monitor your car using the OBD-II connector and an ELM327 adapter',  # NOQA
     author='Auke Willem Oosterhoff',
     author_email='auke@orangetux.nl',
